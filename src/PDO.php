@@ -13,7 +13,7 @@ class PDO extends \PDO
 	public const NULL_OPT_DISALLOW = 2;
 
 	public int $hasError = 0;
-	public ?Logger $logger;
+	public ?Logger $logger = null;
 	protected int $_transactionDepth = 0;
 	private array $_param = [];
 	private array $prepareCache = [];
