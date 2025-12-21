@@ -59,11 +59,11 @@ class ConnectionCollection implements ArrayAccess, Countable, Iterator
 	/**
 	 * @param string $key
 	 *
-	 * @return Connection|null
+	 * @return Connection
 	 */
-	public function get(string $key): ?Connection
+	public function get(string $key): Connection
 	{
-		return $this->array[$key] ?? null;
+		return $this->array[$key];
 	}
 
 	/**
@@ -125,9 +125,9 @@ class ConnectionCollection implements ArrayAccess, Countable, Iterator
 		return isset($this->array[$offset]);
 	}
 
-	public function offsetGet($offset): ?Connection
+	public function offsetGet($offset): Connection
 	{
-		return $this->array[$offset] ?? null;
+		return $this->array[$offset];
 	}
 
 	public function offsetSet($offset, $value): void
