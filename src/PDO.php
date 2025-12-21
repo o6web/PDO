@@ -13,7 +13,7 @@ class PDO extends \PDO
 	public const NULL_OPT_DISALLOW = 2;
 
 	public int $hasError = 0;
-	public ?LoggerInterface $logger;
+	public ?Logger $logger;
 	protected int $_transactionDepth = 0;
 	private array $_param = [];
 	private array $prepareCache = [];
@@ -30,7 +30,7 @@ class PDO extends \PDO
 		$this->setAttribute(\PDO::ATTR_STATEMENT_CLASS, [PDOStatement::class, [$this]]);
 	}
 
-	public function setLogger(LoggerInterface $log): void
+	public function setLogger(Logger $log): void
 	{
 		$this->logger = $log;
 	}

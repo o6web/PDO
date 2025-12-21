@@ -3,6 +3,7 @@
 namespace o6web\PDO;
 
 use Exception;
+use Monolog\Logger;
 
 class Connection
 {
@@ -11,12 +12,12 @@ class Connection
 	private string $username;
 	private string $password;
 	private array $options;
-	private ?LoggerInterface $logger;
+	private ?Logger $logger;
 	private bool $isWebRequest;
 
 	private ?PDO $connection = null;
 
-	public function __construct(string $name, string $dsn, string $username, string $password, array $options = [], ?LoggerInterface $logger = null, ?bool $isWebRequest = null)
+	public function __construct(string $name, string $dsn, string $username, string $password, array $options = [], ?Logger $logger = null, ?bool $isWebRequest = null)
 	{
 		$this->name = $name;
 		$this->dsn = $dsn;
