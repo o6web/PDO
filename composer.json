@@ -1,0 +1,30 @@
+{
+  "name": "o6web/pdo",
+  "description": "Extension of the base PHP PDO class with some added shortcuts and built-in logging",
+  "version": "1.0.0",
+  "homepage": "https://www.o6web.net",
+  "authors": [
+    {
+      "name": "Clark Rasmussen",
+      "homepage": "https://cjr.dev",
+      "role": "Developer"
+    }
+  ],
+  "support": {
+    "issues": "https://github.com/o6web/PDO/issues",
+    "source": "https://github.com/o6web/PDO"
+  },
+  "require": {
+    "php": ">=7.4.0",
+    "ext-pdo": "*",
+    "monolog/monolog": "^2.10"
+  },
+  "require-dev": {
+    "roave/security-advisories": "dev-latest"
+  },
+  "autoload": {
+    "psr-4": {
+      "o6web\\PDO\\": "src/"
+    }
+  }
+}
