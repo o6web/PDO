@@ -12,7 +12,7 @@ class PDO extends \PDO
 	public const NULL_OPT_FORCE = 1;
 	public const NULL_OPT_DISALLOW = 2;
 
-	public int $hasError = 0;
+	public bool $hasError = false;
 	public ?Logger $logger = null;
 	protected int $_transactionDepth = 0;
 	private array $_param = [];
@@ -65,7 +65,7 @@ class PDO extends \PDO
 
 		if ($this->_transactionDepth === 0) {
 			if (($this->hasError) && ($this->inTransaction())) {
-				$this->hasError = 0;
+				$this->hasError = false;
 				$this->rollBack();
 				return false;
 			}
@@ -107,7 +107,7 @@ class PDO extends \PDO
 		try {
 			return parent::exec($statement);
 		} catch (Exception $e) {
-			$this->hasError = 1;
+			$this->hasError = true;
 
 			if ($this->logger) {
 				$this->logger->critical('Statement could not be executed', [
@@ -178,7 +178,7 @@ class PDO extends \PDO
 
 			return $stmt;
 		} catch (Exception $e) {
-			$this->hasError = 1;
+			$this->hasError = true;
 
 			if ($this->logger) {
 				$this->logger->critical('Statement could not be prepared', [
@@ -205,7 +205,7 @@ class PDO extends \PDO
 		try {
 			return parent::query($statement, $mode, $arg3, $ctorargs);
 		} catch (Exception $e) {
-			$this->hasError = 1;
+			$this->hasError = true;
 			if ($this->logger) {
 				$this->logger->critical('Statement could not be executed', [
 					'statement' => $statement,
@@ -242,7 +242,7 @@ class PDO extends \PDO
 		try {
 			return $this->query($statement, $mode);
 		} catch (Exception $e) {
-			$this->hasError = 1;
+			$this->hasError = true;
 
 			if ($this->logger) {
 				$this->logger->critical('Statement could not be executed', [
