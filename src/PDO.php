@@ -15,7 +15,6 @@ class PDO extends \PDO
 	public bool $hasError = false;
 	public ?Logger $logger = null;
 	protected int $_transactionDepth = 0;
-	private array $_param = [];
 	private array $prepareCache = [];
 
 	/**
@@ -169,13 +168,6 @@ class PDO extends \PDO
 
 			$stmt->setExpectedParameters($expected);
 
-			foreach ($expected AS $key => $count) {
-				if (array_key_exists($key, $this->_param)) {
-					$stmt->bindValue($key, $this->_param[$key]->value, $this->_param[$key]->data_type,
-						$this->_param[$key]->null_opt);
-				}
-			}
-
 			return $stmt;
 		} catch (Exception $e) {
 			$this->hasError = true;
@@ -227,39 +219,6 @@ class PDO extends \PDO
 		}
 
 		return false;
-	}
-
-	/**
-	 * Bind a value to the connection, allowing it to be used across all statements
-	 *
-	 * @param int|string $parameter
-	 * @param int|string|null $value
-	 * @param int $data_type
-	 * @param int $null_opt
-	 */
-	public function bindValue(
-		$parameter,
-		$value,
-		int $data_type = self::PARAM_STR,
-		int $null_opt = self::NULL_OPT_NONE
-	): void {
-		$this->_param[$parameter] = (object)[
-			'value' => $value,
-			'data_type' => $data_type,
-			'null_opt' => $null_opt
-		];
-	}
-
-	/**
-	 * Unbind a parameter value from the connection
-	 *
-	 * @param int|string $parameter
-	 * @return bool
-	 */
-	public function unBindValue($parameter): bool
-	{
-		unset($this->_param[$parameter]);
-		return true;
 	}
 
 	/**

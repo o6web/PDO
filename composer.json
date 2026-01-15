@@ -1,7 +1,7 @@
 {
   "name": "o6web/pdo",
   "description": "Extension of the base PHP PDO class with some added shortcuts and built-in logging",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "homepage": "https://www.o6web.net",
   "authors": [
     {
