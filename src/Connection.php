@@ -17,7 +17,7 @@ class Connection
 
 	private ?PDO $connection = null;
 
-	public function __construct(string $name, string $dsn, string $username, string $password, array $options = [], ?Logger $logger = null, ?bool $isWebRequest = null)
+	public function __construct(string $name, string $dsn, string $username, string $password, array $options = [], ?Logger $logger = null, bool $isWebRequest = false)
 	{
 		$this->name = $name;
 		$this->dsn = $dsn;
