@@ -257,7 +257,7 @@ class PDOStatement extends \PDOStatement
 			if (count($keys)) {
 				$key = array_shift($keys);
 
-				if (!is_array($out[$key])) {
+				if ((!array_key_exists($key, $out)) || (!is_array($out[$key]))) {
 					$out[$key] = [];
 				}
 
