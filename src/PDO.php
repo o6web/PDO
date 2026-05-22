@@ -12,10 +12,9 @@ class PDO extends \PDO
 	public const NULL_OPT_FORCE = 1;
 	public const NULL_OPT_DISALLOW = 2;
 
-	public int $hasError = 0;
-	public ?LoggerInterface $logger;
+	public bool $hasError = false;
+	public ?Logger $logger = null;
 	protected int $_transactionDepth = 0;
-	private array $_param = [];
 	private array $prepareCache = [];
 
 	/**
@@ -30,7 +29,7 @@ class PDO extends \PDO
 		$this->setAttribute(\PDO::ATTR_STATEMENT_CLASS, [PDOStatement::class, [$this]]);
 	}
 
-	public function setLogger(LoggerInterface $log): void
+	public function setLogger(Logger $log): void
 	{
 		$this->logger = $log;
 	}
@@ -65,7 +64,7 @@ class PDO extends \PDO
 
 		if ($this->_transactionDepth === 0) {
 			if (($this->hasError) && ($this->inTransaction())) {
-				$this->hasError = 0;
+				$this->hasError = false;
 				$this->rollBack();
 				return false;
 			}
@@ -107,7 +106,7 @@ class PDO extends \PDO
 		try {
 			return parent::exec($statement);
 		} catch (Exception $e) {
-			$this->hasError = 1;
+			$this->hasError = true;
 
 			if ($this->logger) {
 				$this->logger->critical('Statement could not be executed', [
@@ -169,16 +168,9 @@ class PDO extends \PDO
 
 			$stmt->setExpectedParameters($expected);
 
-			foreach ($expected AS $key => $count) {
-				if (array_key_exists($key, $this->_param)) {
-					$stmt->bindValue($key, $this->_param[$key]->value, $this->_param[$key]->data_type,
-						$this->_param[$key]->null_opt);
-				}
-			}
-
 			return $stmt;
 		} catch (Exception $e) {
-			$this->hasError = 1;
+			$this->hasError = true;
 
 			if ($this->logger) {
 				$this->logger->critical('Statement could not be prepared', [
@@ -194,98 +186,39 @@ class PDO extends \PDO
 	/**
 	 * Run a query with included error logging
 	 *
-	 * @param string $statement
-	 * @param int $mode
+	 * @param string $query
+	 * @param int $fetchMode
 	 * @param int|string|object|null $arg3
 	 * @param array|null $ctorargs
-	 * @return PDOStatement|false
+	 * @return false|PDOStatement
 	 */
-	public function query($statement, $mode = PDO::ATTR_DEFAULT_FETCH_MODE, $arg3 = null, array $ctorargs = [])
+	public function query($query, $fetchMode = self::ATTR_DEFAULT_FETCH_MODE, $arg3 = null, $ctorargs = [])
 	{
 		try {
-			return parent::query($statement, $mode, $arg3, $ctorargs);
+			if ($fetchMode === self::FETCH_CLASS) {
+				return parent::query($query, $fetchMode, $arg3, $ctorargs);
+			}
+
+			if (($fetchMode === self::FETCH_COLUMN) || ($fetchMode === self::FETCH_INTO)) {
+				return parent::query($query, $fetchMode, $arg3);
+			}
+
+			if ($fetchMode !== self::ATTR_DEFAULT_FETCH_MODE) {
+				return parent::query($query, $fetchMode);
+			}
+
+			return parent::query($query);
 		} catch (Exception $e) {
-			$this->hasError = 1;
+			$this->hasError = true;
 			if ($this->logger) {
 				$this->logger->critical('Statement could not be executed', [
-					'statement' => $statement,
+					'statement' => $query,
 					'exception' => $e,
 				]);
 			}
 		}
 
 		return false;
-	}
-
-	/**
-	 * Run a simple query with included error logging
-	 *
-	 * This is intended just for fetch assoc/num/both because they don't require the third and fourth parameters from
-	 * PDO::query and there's something weird when you supply null for those so extending it gets weird
-	 *
-	 * @param string $statement
-	 * @param int $mode
-	 * @return PDOStatement|false
-	 */
-	public function run(string $statement, int $mode = self::FETCH_ASSOC)
-	{
-		if (!in_array($mode, [self::FETCH_ASSOC, self::FETCH_NUM, self::FETCH_BOTH], true)) {
-			if ($this->logger) {
-				$this->logger->error('Invalid fetch mode defined', [
-					'mode' => $mode,
-				]);
-			}
-
-			return false;
-		}
-
-		try {
-			return $this->query($statement, $mode);
-		} catch (Exception $e) {
-			$this->hasError = 1;
-
-			if ($this->logger) {
-				$this->logger->critical('Statement could not be executed', [
-					'statement' => $statement,
-					'exception' => $e,
-				]);
-			}
-		}
-
-		return false;
-	}
-
-	/**
-	 * Bind a value to the connection, allowing it to be used across all statements
-	 *
-	 * @param int|string $parameter
-	 * @param int|string|null $value
-	 * @param int $data_type
-	 * @param int $null_opt
-	 */
-	public function bindValue(
-		$parameter,
-		$value,
-		int $data_type = self::PARAM_STR,
-		int $null_opt = self::NULL_OPT_NONE
-	): void {
-		$this->_param[$parameter] = (object)[
-			'value' => $value,
-			'data_type' => $data_type,
-			'null_opt' => $null_opt
-		];
-	}
-
-	/**
-	 * Unbind a parameter value from the connection
-	 *
-	 * @param int|string $parameter
-	 * @return bool
-	 */
-	public function unBindValue($parameter): bool
-	{
-		unset($this->_param[$parameter]);
-		return true;
 	}
 
 	/**
