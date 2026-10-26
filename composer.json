@@ -1,7 +1,7 @@
 {
   "name": "o6web/pdo",
   "description": "Extension of the base PHP PDO class with some added shortcuts and built-in logging",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "homepage": "https://www.o6web.net",
   "authors": [
     {
@@ -17,7 +17,7 @@
   "require": {
     "php": ">=8.5.0",
     "ext-pdo": "*",
-    "monolog/monolog": "^2.10"
+    "monolog/monolog": "^3.12"
   },
   "require-dev": {
     "roave/security-advisories": "dev-latest"
