@@ -95,7 +95,7 @@ class ConnectionCollection implements ArrayAccess, Countable, Iterator
 		return new static(array_filter($this->array));
 	}
 
-	public function current()
+	public function current(): mixed
 	{
 		return current($this->array);
 	}

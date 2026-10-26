@@ -43,9 +43,9 @@ class Connection
 				}
 			} catch (Exception $e) {
 				$msg = 'Database connection error.';
-				if ($this->logger) {
-					$this->logger->alert($msg, ['exception' => $e]);
-				}
+
+				$this->logger?->alert($msg, ['exception' => $e]);
+
 				if ($this->isWebRequest) {
 					echo $msg;
 				}

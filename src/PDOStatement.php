@@ -3,7 +3,6 @@
 namespace o6web\PDO;
 
 use Exception;
-use Monolog\Logger;
 
 class PDOStatement extends \PDOStatement
 {
@@ -46,19 +45,19 @@ class PDOStatement extends \PDOStatement
 	 * Bind a value to the statement, stripping slashes and forcing NULLs for strings
 	 *
 	 * @param int|string $param
-	 * @param int|string|null|array $value
+	 * @param mixed $value
 	 * @param int $type
 	 * @param int $null_opt
 	 * @param ?int $length
 	 * @return bool
 	 */
 	public function bindValue(
-		$param,
-		$value,
-		$type = PDO::PARAM_STR,
+		int|string $param,
+		mixed $value,
+		int $type = \PDO::PARAM_STR,
 		int $null_opt = PDO::NULL_OPT_NONE,
 		?int $length = null
-	): ?bool {
+	): bool {
 		if ((is_array($value)) && (count($value) === 1)) {
 			$value = $value[0];
 		}
@@ -78,31 +77,33 @@ class PDOStatement extends \PDOStatement
 				}
 			} while ($n <= $this->_expectedParameters[$param]);
 
-			return $n;
+			return ($n === count($value));
 		}
 
 		// IF WE EXPECT MORE THAN ONE, LOOP THROUGH TO ASSIGN THE VALUE EVERYWHERE NEEDED
 		if ((array_key_exists($param, $this->_expectedParameters)) && ($this->_expectedParameters[$param] > 1)) {
-			$result = false;
 			for ($n = 1; $n <= $this->_expectedParameters[$param]; $n++) {
 				$result = $this->bindValue(($param . $n), $value, $type, $null_opt, $length);
+				if ($result === false) {
+					return false;
+				}
 			}
 
-			return $result;
+			return true;
 		}
 
-		if ($type === PDO::PARAM_INT) {
+		if ($type === \PDO::PARAM_INT) {
 			if (((int)$value === 0) && ($null_opt === PDO::NULL_OPT_FORCE)) {
 				$value = null;
-				$type = PDO::PARAM_NULL;
+				$type = \PDO::PARAM_NULL;
 			} elseif (($value === '') || (($value === null) && ($null_opt === PDO::NULL_OPT_DISALLOW))) {
 				$value = 0;
 			} elseif ($value === null) {
-				$type = PDO::PARAM_NULL;
+				$type = \PDO::PARAM_NULL;
 			} else {
 				$value = (int)$value;
 			}
-		} elseif ($type === PDO::PARAM_STR) {
+		} elseif ($type === \PDO::PARAM_STR) {
 			if (($null_opt === PDO::NULL_OPT_FORCE) && ($value === '')) {
 				$value = null;
 			} elseif (($null_opt === PDO::NULL_OPT_DISALLOW) && ($value === null)) {
@@ -112,7 +113,7 @@ class PDOStatement extends \PDOStatement
 			}
 
 			if ($value === null) {
-				$type = PDO::PARAM_NULL;
+				$type = \PDO::PARAM_NULL;
 			} else {
 				// WORDPRESS REQUIRES THIS
 				$value = stripslashes($value);
@@ -126,15 +127,13 @@ class PDOStatement extends \PDOStatement
 		} catch (Exception $e) {
 			$this->pdo->hasError = 1;
 
-			if ($this->pdo->logger) {
-				$this->pdo->logger->critical('Value could not be bound', [
-					'parameter' => $param,
-					'value' => $value,
-					'type' => $type,
-					'exception' => $e,
-					'debug' => $this->debugDumpParams(),
-				]);
-			}
+			$this->pdo->logger?->critical('Value could not be bound', [
+				'parameter' => $param,
+				'value' => $value,
+				'type' => $type,
+				'exception' => $e,
+				'debug' => $this->debugDumpParams(),
+			]);
 
 			return false;
 		}
@@ -143,23 +142,21 @@ class PDOStatement extends \PDOStatement
 	/**
 	 * Execute an o6PDOStatement and log any errors, returning the o6PDOStatement
 	 *
-	 * @param null $params
+	 * @param array|null $params
 	 * @return self|bool
 	 */
-	public function execute($params = null)
+	public function execute(?array $params = null): self|bool
 	{
 		try {
 			$this->executeResponse = parent::execute($params);
 		} catch (Exception $e) {
 			$this->pdo->hasError = 1;
 
-			if ($this->pdo->logger) {
-				$this->pdo->logger->critical('Statement could not be executed', [
-					'exception' => $e,
-					'debug' => $this->debugDumpParams(),
-					'input' => $this->_inputParameters,
-				]);
-			}
+			$this->pdo->logger?->critical('Statement could not be executed', [
+				'exception' => $e,
+				'debug' => $this->debugDumpParams(),
+				'input' => $this->_inputParameters,
+			]);
 
 			return false;
 		}
@@ -178,12 +175,12 @@ class PDOStatement extends \PDOStatement
 	/**
 	 * Fetch the next result from the statement
 	 *
-	 * @param null $mode
+	 * @param int $mode
 	 * @param int $cursorOrientation
 	 * @param int $cursorOffset
 	 * @return mixed
 	 */
-	public function fetch($mode = null, $cursorOrientation = \PDO::FETCH_ORI_NEXT, $cursorOffset = 0)
+	public function fetch(int $mode = \PDO::FETCH_DEFAULT, int $cursorOrientation = \PDO::FETCH_ORI_NEXT, int $cursorOffset = 0): mixed
 	{
 		if ((!$this->isFetchFriendly) && ($this->pdo->logger)) {
 			$this->pdo->logger->error('Attempted fetch on non-select/show query', [
@@ -198,10 +195,10 @@ class PDOStatement extends \PDOStatement
 	/**
 	 * Return the value of the first record of a specified column
 	 *
-	 * @param string|int $key
+	 * @param string|int|null $key
 	 * @return mixed
 	 */
-	public function fetchColumnValue($key = null)
+	public function fetchColumnValue(string|int|null $key = null): mixed
 	{
 		$record = $this->fetch();
 		if (is_array($record)) {
@@ -218,17 +215,17 @@ class PDOStatement extends \PDOStatement
 	/**
 	 * Return all rows of a single column as an array
 	 *
-	 * @param string|int $key
+	 * @param string|int|null $key
 	 * @param ?array $output
 	 * @return array
 	 */
-	public function fetchColumnAll($key = null, ?array $output = null): array
+	public function fetchColumnAll(string|int|null $key = null, ?array $output = null): array
 	{
 		if (!is_array($output)) {
 			$output = [];
 		}
 
-		while ($record = $this->fetch(PDO::FETCH_ASSOC)) {
+		while ($record = $this->fetch(\PDO::FETCH_ASSOC)) {
 			if ($key === null) {
 				$output[] = reset($record);
 			} else {
@@ -241,13 +238,13 @@ class PDOStatement extends \PDOStatement
 	/**
 	 * Return an array of all rows with the value of the specified field(s) as key(s)
 	 *
-	 * @param string|integer|array $key_field
+	 * @param string|int|array $key_field
 	 * @param bool $remove_key
 	 * @param bool $return_array
-	 * @param string|integer $value_field
+	 * @param string|int|null $value_field
 	 * @return array
 	 */
-	public function fetchAllKeyed($key_field, bool $remove_key = false, bool $return_array = true, $value_field = ''): array
+	public function fetchAllKeyed(string|int|array $key_field, bool $remove_key = false, bool $return_array = true, string|int|null $value_field = null): array
 	{
 		if (!is_array($key_field)) {
 			$key_field = [$key_field];
@@ -278,7 +275,7 @@ class PDOStatement extends \PDOStatement
 		};
 
 		$output = [];
-		while ($record = $this->fetch(PDO::FETCH_ASSOC)) {
+		while ($record = $this->fetch(\PDO::FETCH_ASSOC)) {
 			$keys = [];
 
 			foreach ($key_field AS $key) {
@@ -296,14 +293,14 @@ class PDOStatement extends \PDOStatement
 	}
 
 	/**
-	 * Override the debugDumpParams methos to return a string
+	 * Extend the debugDumpParams method to return a string
 	 *
 	 * @return string
 	 */
-	public function debugDumpParams(): string
+	public function debugDumpParamString(): string
 	{
 		ob_start();
-		parent::debugDumpParams();
+		$this->debugDumpParams();
 		return ob_get_clean();
 	}
 

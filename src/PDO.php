@@ -8,9 +8,9 @@ use PDOException;
 
 class PDO extends \PDO
 {
-	public const NULL_OPT_NONE = 0;
-	public const NULL_OPT_FORCE = 1;
-	public const NULL_OPT_DISALLOW = 2;
+	public const int NULL_OPT_NONE = 0;
+	public const int NULL_OPT_FORCE = 1;
+	public const int NULL_OPT_DISALLOW = 2;
 
 	public bool $hasError = false;
 	public ?Logger $logger = null;
@@ -37,9 +37,9 @@ class PDO extends \PDO
 	/**
 	 * Start a new transaction or adjust savepoint level as needed
 	 *
-	 * @return bool|void
+	 * @return bool
 	 */
-	public function beginTransaction()
+	public function beginTransaction(): bool
 	{
 		if ($this->_transactionDepth === 0) {
 			$return = parent::beginTransaction();
@@ -49,16 +49,20 @@ class PDO extends \PDO
 			return $return;
 		}
 
-		$this->exec('SAVEPOINT LEVEL' . $this->_transactionDepth);
-		$this->_transactionDepth++;
+		$return = (bool)$this->exec('SAVEPOINT LEVEL' . $this->_transactionDepth);
+		if ($return) {
+			$this->_transactionDepth++;
+		}
+
+		return $return;
 	}
 
 	/**
 	 * Commit the transaction if there was no error, otherwise rollback
 	 *
-	 * @return bool|void
+	 * @return bool
 	 */
-	public function commit()
+	public function commit(): bool
 	{
 		$this->_transactionDepth--;
 
@@ -72,15 +76,15 @@ class PDO extends \PDO
 			return parent::commit();
 		}
 
-		$this->exec('RELEASE SAVEPOINT LEVEL' . $this->_transactionDepth);
+		return (bool)$this->exec('RELEASE SAVEPOINT LEVEL' . $this->_transactionDepth);
 	}
 
 	/**
 	 * Execute a rollback if the transaction depth is 0, otherwise manipulate savepoint level
 	 *
-	 * @return bool|void
+	 * @return bool
 	 */
-	public function rollBack()
+	public function rollBack(): bool
 	{
 		if ($this->_transactionDepth === 0) {
 			throw new PDOException('Rollback error : There is no transaction started');
@@ -92,7 +96,7 @@ class PDO extends \PDO
 			return parent::rollBack();
 		}
 
-		$this->exec('ROLLBACK TO SAVEPOINT LEVEL' . $this->_transactionDepth);
+		return (bool)$this->exec('ROLLBACK TO SAVEPOINT LEVEL' . $this->_transactionDepth);
 	}
 
 	/**
@@ -101,19 +105,17 @@ class PDO extends \PDO
 	 * @param string $statement
 	 * @return int|false
 	 */
-	public function exec($statement)
+	public function exec(string $statement): false|int
 	{
 		try {
 			return parent::exec($statement);
 		} catch (Exception $e) {
 			$this->hasError = true;
 
-			if ($this->logger) {
-				$this->logger->critical('Statement could not be executed', [
-					'statement' => $statement,
-					'exception' => $e,
-				]);
-			}
+			$this->logger?->critical('Statement could not be executed', [
+				'statement' => $statement,
+				'exception' => $e,
+			]);
 		}
 
 		return false;
@@ -126,7 +128,7 @@ class PDO extends \PDO
 	 * @param array|null $options
 	 * @return PDOStatement|false
 	 */
-	public function prepare($query, $options = null)
+	public function prepare(string $query, ?array $options = null): false|PDOStatement
 	{
 		if (!is_array($options)) {
 			$options = [];
@@ -172,12 +174,10 @@ class PDO extends \PDO
 		} catch (Exception $e) {
 			$this->hasError = true;
 
-			if ($this->logger) {
-				$this->logger->critical('Statement could not be prepared', [
-					'statement' => $stmt,
-					'exception' => $e,
-				]);
-			}
+			$this->logger?->critical('Statement could not be prepared', [
+				'statement' => $stmt,
+				'exception' => $e,
+			]);
 		}
 
 		return false;
@@ -187,20 +187,19 @@ class PDO extends \PDO
 	 * Run a query with included error logging
 	 *
 	 * @param string $query
-	 * @param int $fetchMode
-	 * @param int|string|object|null $arg3
-	 * @param array|null $ctorargs
+	 * @param int|null $fetchMode
+	 * @param mixed ...$fetchModeArgs
 	 * @return false|PDOStatement
 	 */
-	public function query($query, $fetchMode = self::ATTR_DEFAULT_FETCH_MODE, $arg3 = null, $ctorargs = [])
+	public function query(string $query, ?int $fetchMode = self::ATTR_DEFAULT_FETCH_MODE, mixed ...$fetchModeArgs): false|PDOStatement
 	{
 		try {
 			if ($fetchMode === self::FETCH_CLASS) {
-				return parent::query($query, $fetchMode, $arg3, $ctorargs);
+				return parent::query($query, $fetchMode, $fetchModeArgs);
 			}
 
 			if (($fetchMode === self::FETCH_COLUMN) || ($fetchMode === self::FETCH_INTO)) {
-				return parent::query($query, $fetchMode, $arg3);
+				return parent::query($query, $fetchMode, $fetchModeArgs);
 			}
 
 			if ($fetchMode !== self::ATTR_DEFAULT_FETCH_MODE) {
@@ -210,12 +209,10 @@ class PDO extends \PDO
 			return parent::query($query);
 		} catch (Exception $e) {
 			$this->hasError = true;
-			if ($this->logger) {
-				$this->logger->critical('Statement could not be executed', [
-					'statement' => $query,
-					'exception' => $e,
-				]);
-			}
+			$this->logger?->critical('Statement could not be executed', [
+				'statement' => $query,
+				'exception' => $e,
+			]);
 		}
 
 		return false;
@@ -228,7 +225,7 @@ class PDO extends \PDO
 	 * @param string|null $key
 	 * @return string
 	 */
-	public function buildInString($count, ?string $key = null): string
+	public function buildInString(int|array $count, ?string $key = null): string
 	{
 		if (is_array($count)) {
 			$count = count($count);
